@@ -4,6 +4,7 @@ import singer
 from singer import  metadata
 import tap_postgres.db as post_db
 
+LOGGER = singer.get_logger('tap_postgres')
 
 # pylint: disable=invalid-name,missing-function-docstring
 def should_sync_column(md_map, field_name):
@@ -25,9 +26,20 @@ def send_schema_message(stream, bookmark_properties):
     else:
         key_properties = s_md.get((), {}).get('table-key-properties', [])
 
+    desired_columns = stream['desired_columns'] if 'desired_columns' in stream else None
+
+    schema = stream['schema']
+    properties = {}
+
+    for property in schema['properties']:
+        if property in desired_columns:
+            properties[property] = schema['properties'][property]
+
+    schema['properties'] = properties
+
     schema_message = {'type' : 'SCHEMA',
                       'stream' : post_db.calculate_destination_stream_name(stream, s_md),
-                      'schema' : stream['schema'],
+                      'schema' : schema,
                       'key_properties' : key_properties,
                       'bookmark_properties': bookmark_properties}
 

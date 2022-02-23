@@ -81,7 +81,6 @@ def do_sync_incremental(conn_config, stream, state, desired_columns, md_map):
         raise Exception(f"invalid keys found in state: {illegal_bk_keys}")
 
     state = singer.write_bookmark(state, stream['tap_stream_id'], 'replication_key', replication_key)
-
     sync_common.send_schema_message(stream, [replication_key])
     state = incremental.sync_table(conn_config, stream, state, desired_columns, md_map)
 
@@ -161,9 +160,13 @@ def sync_traditional_stream(conn_config, stream, state, sync_method, end_lsn):
     desired_columns = [c for c in stream['schema']['properties'].keys() if sync_common.should_sync_column(md_map, c)]
     desired_columns.sort()
 
+    LOGGER.info("desired_columns(%s) ", desired_columns)
+
     if len(desired_columns) == 0:
         LOGGER.warning('There are no columns selected for stream %s, skipping it', stream['tap_stream_id'])
         return state
+
+    stream['desired_columns'] = desired_columns
 
     register_type_adapters(conn_config)
 
